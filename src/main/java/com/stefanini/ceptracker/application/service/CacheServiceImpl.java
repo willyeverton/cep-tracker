@@ -41,15 +41,4 @@ public class CacheServiceImpl implements CacheService {
         }
         return null;
     }
-
-    @Override
-    public void delete(String key) {
-        redisTemplate.delete(key);
-        log.debug("Chave removida do cache: {}", key);
-    }
-
-    @Override
-    public boolean exists(String key) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
-    }
 }
