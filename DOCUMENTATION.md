@@ -69,9 +69,9 @@ O CEP Tracker implementa **Clean Architecture** para consulta de CEPs com cache 
 │  │                         │  │                         │  │                     │ │
 │  │ WebClientConfig        │  │ MetricsConfig           │  │ CepApiException     │ │
 │  │ - WebClient.Builder    │  │ - TimedAspect Bean      │  │ - RuntimeException  │ │
-│  │                        │  │ - MeterRegistry         │  │ GlobalExceptionHandler │
-│  │ RedisConfig            │  │                         │  │ - @RestControllerAdvice│ │
-│  │ - RedisTemplate        │  │ Custom Counters:        │  │ - HTTP status mapping│ │
+│  │                        │  │ - MeterRegistry         │  │                     │ │
+│  │ RedisConfig            │  │                         │  │                     │ │
+│  │ - RedisTemplate        │  │ Custom Counters:        │  │                     │ │
 │  │ - ConnectionFactory    │  │ - cepRequestCounter     │  │                     │ │
 │  │ - Serializers          │  │ - cacheHitCounter       │  │                     │ │
 │  └─────────────────────────┘  └─────────────────────────┘  └─────────────────────┘ │
@@ -85,10 +85,9 @@ O CEP Tracker implementa **Clean Architecture** para consulta de CEPs com cache 
 │  │      PostgreSQL         │  │      Redis Cache        │  │    External CEP API │ │
 │  │                         │  │                         │  │                     │ │
 │  │ Tabela: cep_audit_logs │  │ - Key pattern: cep:*    │  │ - ViaCEP (prod)     │ │
-│  │ Índices:               │  │ - TTL: configurável     │  │ - WireMock (dev)    │ │
-│  │ - idx_cep              │  │ - JSON serialization    │  │ - Timeout: 5000ms   │ │
-│  │ - idx_timestamp        │  │ - String Redis Template │  │ - GET /ws/{cep}/json│ │
-│  │ - idx_success          │  │                         │  │                     │ │
+│  │ Criação automática JPA │  │ - TTL: configurável     │  │ - WireMock (dev)    │ │
+│  │ - DDL auto: update     │  │ - JSON serialization    │  │ - Timeout: 5000ms   │ │
+│  │                        │  │ - String Redis Template │  │ - GET /ws/{cep}/json│ │
 │  └─────────────────────────┘  └─────────────────────────┘  └─────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -200,7 +199,6 @@ public class CepController {
 @RequestMapping("/api/v1/audit")
 public class AuditController {
     
-    // Endpoints implementados:
     // GET /logs - lista todos os logs com paginação
     // GET /logs/cep/{cep} - logs por CEP específico
     // GET /stats - estatísticas de uso
@@ -361,7 +359,10 @@ public class MetricsConfig {
 
 ### **Schema Implementado**
 ```sql
--- Tabela: cep_audit_logs
+-- Tabela: cep_audit_logs (criada automaticamente pelo JPA)
+-- DDL AUTO: update (spring.jpa.hibernate.ddl-auto=update)
+
+-- Estrutura da tabela:
 CREATE TABLE cep_audit_logs (
     id BIGSERIAL PRIMARY KEY,
     cep VARCHAR(8) NOT NULL,
@@ -374,10 +375,8 @@ CREATE TABLE cep_audit_logs (
     user_agent TEXT
 );
 
--- Índices implementados:
-CREATE INDEX idx_cep_audit_log_cep ON cep_audit_logs(cep);
-CREATE INDEX idx_cep_audit_log_timestamp ON cep_audit_logs(request_timestamp);
-CREATE INDEX idx_cep_audit_log_success ON cep_audit_logs(success);
+-- Índices são criados automaticamente pelo JPA conforme necessário
+-- Para otimizações futuras, podem ser adicionados índices manuais
 ```
 
 ## Cache Strategy
@@ -453,7 +452,7 @@ management:
 ```
 src/test/java/
 ├── integration/
-│   └── CepTrackerIntegrationTest.java    # TestContainers + E2E
+│   └── CepTrackerIntegrationTest.java    # TestContainers (Redis) + @MockBean
 ├── application/service/
 │   └── CepServiceImplTest.java           # Testes unitários
 └── presentation/controller/
@@ -463,10 +462,11 @@ src/test/java/
 ### **Tecnologias de Teste**
 - **JUnit 5**: Framework base
 - **Mockito**: Mocks e stubs
-- **TestContainers**: PostgreSQL + Redis reais
-- **WireMock**: Mock API CEP externa
+- **TestContainers**: Redis real para integração
+- **@MockBean**: Mock da API externa
 - **@WebMvcTest**: Testes controller
 - **@SpringBootTest**: Testes integração
+- **H2**: Banco de dados para testes
 
 ## Containerização
 
@@ -492,7 +492,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ## Configurações por Ambiente
 
-### **Profile: dev (Local)**
+### **Profile: padrão (application.yml)**
 ```yaml
 spring:
   datasource:
@@ -502,11 +502,15 @@ spring:
 app:
   cep-service:
     external-api:
-      base-url: http://localhost:8089  # WireMock
+      base-url: https://viacep.com.br  # API real
 ```
 
-### **Profile: docker (Containers)**
+### **Profile: docker (application-docker.yml)**
 ```yaml
+# Sobrescrições para ambiente Docker
+logging:
+  level:
+    com.stefanini.ceptracker: DEBUG
 spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/ceptracker
@@ -515,20 +519,33 @@ spring:
 app:
   cep-service:
     external-api:
-      base-url: http://wiremock:8080
+      base-url: http://wiremock:8080  # WireMock
 ```
 
-### **Profile: aws (Produção)**
+### **Profile: aws (application-aws.yml)**
 ```yaml
+# Configurações específicas de produção
 spring:
-  datasource:
-    url: jdbc:postgresql://${DB_HOST}:5432/ceptracker
-  redis:
-    host: ${REDIS_HOST}
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
 app:
   cep-service:
     external-api:
-      base-url: https://viacep.com.br
+      base-url: https://viacep.com.br  # API real
+```
+
+### **Profile: test (application-test.yml)**
+```yaml
+# Configurações para testes automatizados
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
 ```
 
 ## Conclusão
@@ -543,14 +560,13 @@ A aplicação CEP Tracker implementa uma arquitetura limpa e bem estruturada com
 - **Tratamento de erros** robusto
 - **Testes automatizados** com boa cobertura
 - **Containerização** completa
-- **Multi-environment** (dev/docker/aws)
+- **Multi-environment** (padrão/docker/aws/test)
 
 ### **Tecnologias Core**
 - Java 11 + Spring Boot 2.7
 - PostgreSQL + Redis
 - Docker + Docker Compose
-- JUnit 5 + TestContainers + WireMock
+- JUnit 5 + TestContainers + Mockito
 - Micrometer + Spring Actuator
 
-A implementação foca em **simplicidade, robustez e manutenibilidade**, seguindo boas práticas de desenvolvimento sem over-engineering.
-```
+A implementação foca em **simplicidade, robustez e manutenibilidade**, seguindo boas práticas de desenvolvimento.
