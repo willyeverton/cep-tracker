@@ -204,8 +204,7 @@ src/main/java/com/stefanini/ceptracker/
 ### Métricas Disponíveis
 - **cep.requests.total**: Total de requisições
 - **cep.cache.hits**: Cache hits
-- **cep.cache.misses**: Cache misses  
-- **cep.lookup.time**: Tempo de consulta
+- **cep.cache.misses**: Cache misses
 
 ### Health Checks
 ```bash

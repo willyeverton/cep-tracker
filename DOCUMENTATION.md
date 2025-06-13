@@ -27,7 +27,7 @@ O CEP Tracker implementa **Clean Architecture** para consulta de CEPs com cache 
 │  │                         │  │                         │  │                     │ │
 │  │ - Cache-aside pattern  │  │ - logCepRequest()       │  │ - save() with TTL   │ │
 │  │ - Métricas customizadas│  │ - findById()            │  │ - get() com Class   │ │
-│  │ - @Timed annotation    │  │ - Enriquece com IP/UA   │  │ - delete()          │ │
+│  │                        │  │ - Enriquece com IP/UA   │  │ - delete()          │ │
 │  │ - Orquestração fluxo   │  │ - Timestamp automático  │  │ - exists()          │ │
 │  └─────────────────────────┘  └─────────────────────────┘  └─────────────────────┘ │
 └─────────────────────────────────┬───────────────────────────────────────────────────┘
@@ -68,7 +68,7 @@ O CEP Tracker implementa **Clean Architecture** para consulta de CEPs com cache 
 │  │     Configuration       │  │      Monitoring         │  │      Exception      │ │
 │  │                         │  │                         │  │                     │ │
 │  │ WebClientConfig        │  │ MetricsConfig           │  │ CepApiException     │ │
-│  │ - WebClient.Builder    │  │ - TimedAspect Bean      │  │ - RuntimeException  │ │
+│  │ - WebClient.Builder    │  │                         │  │ - RuntimeException  │ │
 │  │                        │  │ - MeterRegistry         │  │                     │ │
 │  │ RedisConfig            │  │                         │  │                     │ │
 │  │ - RedisTemplate        │  │ Custom Counters:        │  │                     │ │
@@ -228,7 +228,6 @@ public class CepServiceImpl implements CepService {
     // Funcionalidades implementadas:
     // - Cache-aside pattern
     // - Métricas customizadas (Counter para requests, hits, misses)
-    // - @Timed para métricas de tempo
     // - Verificação cache primeiro
     // - Fallback para API externa
     // - Cache apenas respostas válidas (erro != true)
@@ -348,11 +347,6 @@ public class WebClientConfig {
 public class RedisConfig {
     // RedisTemplate<String, String> com StringRedisSerializer
 }
-
-@Configuration
-public class MetricsConfig {
-    // TimedAspect bean para @Timed
-}
 ```
 
 ## Banco de Dados
@@ -423,9 +417,6 @@ public CepResponse findCep(String cep) {
 - cepRequestCounter: Total de requests
 - cacheHitCounter: Cache hits
 - cacheMissCounter: Cache misses
-
-// Via @Timed annotation:
-- cep.lookup.time: Tempo de consulta CEP
 ```
 
 ### **Health Checks**

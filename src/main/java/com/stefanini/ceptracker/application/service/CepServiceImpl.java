@@ -4,7 +4,6 @@ import com.stefanini.ceptracker.domain.dto.CepResponse;
 import com.stefanini.ceptracker.domain.service.CacheService;
 import com.stefanini.ceptracker.domain.service.CepService;
 import com.stefanini.ceptracker.infrastructure.client.CepApiClient;
-import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +39,6 @@ public class CepServiceImpl implements CepService {
     private int cacheTtlSeconds;
 
     @Override
-    @Timed(value = "cep.lookup.time", description = "Time taken to lookup CEP")
     public CepResponse findCep(String cep) {
         cepRequestCounter.increment();
 
