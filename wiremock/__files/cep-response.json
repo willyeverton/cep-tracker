@@ -1,0 +1,12 @@
+{
+    "cep": "{{request.pathSegments.[1]}}",
+    "logradouro": "Rua das Flores",
+    "complemento": "Apto 101",
+    "bairro": "Centro",
+    "localidade": "São Paulo",
+    "uf": "SP",
+    "ibge": "3550308",
+    "gia": "1004",
+    "ddd": "11",
+    "siafi": "7107"
+}

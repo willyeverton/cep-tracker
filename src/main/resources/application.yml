@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: cep-tracker
+  profiles:
+    active: ${PROFILE:dev}
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ceptracker}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: ${SHOW_SQL:false}
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.stefanini.ceptracker: ${LOG_LEVEL:INFO}
+    org.springframework.web: WARN
+
+app:
+  cep-service:
+    external-api:
+      base-url: ${CEP_API_URL:https://viacep.com.br}
+      timeout: ${CEP_API_TIMEOUT:5000}
+    cache:
+      ttl: ${CACHE_TTL:3600}

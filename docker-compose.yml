@@ -1,0 +1,93 @@
+version: '3.3'
+
+services:
+  postgres:
+    image: postgres:13-alpine
+    container_name: cep-tracker-db
+    environment:
+      POSTGRES_DB: ceptracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cep-tracker-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cep-tracker-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cep-tracker-network
+
+  wiremock:
+    image: wiremock/wiremock:latest
+    container_name: cep-tracker-mock
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings
+      - ./wiremock/__files:/home/wiremock/__files
+    command: --global-response-templating --disable-gzip --verbose
+    networks:
+      - cep-tracker-network
+
+  app:
+    build: .
+    container_name: cep-tracker-app
+    environment:
+      # Profile específico
+      - PROFILE=docker
+
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ceptracker
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+
+      # Cache
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+      # External API
+      - CEP_API_URL=http://wiremock:8080
+      - CEP_API_TIMEOUT=5000
+
+      # JPA
+      - DDL_AUTO=update
+      - SHOW_SQL=true
+
+      # Logging
+      - LOG_LEVEL=DEBUG
+
+      # Cache
+      - CACHE_TTL=3600
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+      - wiremock
+    networks:
+      - cep-tracker-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+networks:
+  cep-tracker-network:
+    driver: bridge

@@ -1,0 +1,12 @@
+# Profile específico para Docker - apenas sobrescrições necessárias
+logging:
+  level:
+    com.stefanini.ceptracker: DEBUG
+
+# Configurações específicas do ambiente Docker podem ser adicionadas aqui se necessário
+# Por exemplo, configurações de pool de conexão específicas para container
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
